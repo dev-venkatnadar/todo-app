@@ -285,12 +285,12 @@
 								{
 									"key": "status",
 									"value": "pending",
-									"description": "Optional: pending, in_progress, completed"
+									"description": "Optional: pending, in_progress, completed (filters paginated list, counts remain overall)"
 								},
 								{
 									"key": "user_id",
 									"value": "2",
-									"description": "Optional (Admin only): filter tasks assigned to a specific user",
+									"description": "Optional (Admin only): filter tasks and counts for a specific user",
 									"disabled": true
 								},
 								{
@@ -303,7 +303,7 @@
 								}
 							]
 						},
-						"description": "List tasks. Standard users see only their own tasks. Admins see all tasks and can filter by `user_id` and `status`."
+						"description": "List tasks with overall status counts. Response contains:\n- `counts`: { total, pending, in_progress, completed } (scoped to user, or global for admin)\n- `tasks`: paginated task models\nStandard users see only their own tasks. Admins see all tasks and can filter by `user_id` and `status`."
 					},
 					"response": []
 				},
@@ -317,7 +317,7 @@
 									"if (pm.response.code === 201) {",
 									"    var jsonData = pm.response.json();",
 									"    if (jsonData.id) {",
-									"        pm.collectionVariables.set('task_id', jsonData.data.id);",
+									"        pm.collectionVariables.set('task_id', jsonData.id);",
 									"    }",
 									"}"
 								],

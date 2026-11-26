@@ -49,7 +49,40 @@ A headless REST API todo application built with Laravel 9, Laravel Sanctum token
 - `GET /api/user` — Get the authenticated user profile (`Authorization: Bearer <token>`).
 
 ### Tasks (`Authorization: Bearer <token>`)
-- `GET /api/tasks` — List tasks (optional `?status=pending|in_progress|completed`, and `?user_id=<id>` for admins).
+- `GET /api/tasks` — List tasks with global status counts:
+  - Query parameters:
+    - `status=pending|in_progress|completed` (filter the paginated list; status counts still reflect overall counts)
+    - `user_id=<id>` (Admin only: filter tasks and counts for a specific user)
+    - `page=<page_number>`
+    - `per_page=<number>` (default 15, max 100)
+  - Sample Response:
+    ```json
+    {
+      "counts": {
+        "total": 12,
+        "pending": 5,
+        "in_progress": 3,
+        "completed": 4
+      },
+      "tasks": {
+        "current_page": 1,
+        "data": [
+          {
+            "id": 1,
+            "user_id": 2,
+            "created_by": 1,
+            "title": "Sample task",
+            "description": "Details...",
+            "status": "pending",
+            "due_date": "2026-12-01",
+            "user": { ... },
+            "creator": { ... }
+          }
+        ],
+        "total": 12
+      }
+    }
+    ```
 - `POST /api/tasks` — Create a task (**admin only**).
   - Body: `{ "title": "Task title", "description": "Optional details", "status": "pending", "due_date": "2026-12-01", "user_id": 2 }`
 - `GET /api/tasks/{id}` — View a specific task (admin or task owner).

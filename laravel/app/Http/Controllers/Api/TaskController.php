@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -14,27 +14,51 @@ class TaskController extends Controller
 {
     /**
      * List tasks. Admins see all tasks; users see only their own tasks.
+     * Also returns overall counts for each status (pending, in_progress, completed, total)
+     * scoped to the user (or all tasks for admin).
      */
-    public function index(Request $request): LengthAwarePaginator
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Task::class);
 
         $user = $request->user();
-        $query = Task::with(['user', 'creator'])->latest('id');
 
+        // Base query for counts (scoped by ownership or admin filter, without status filter)
+        $countsQuery = Task::query();
         if (! $user->isAdmin()) {
-            $query->where('user_id', $user->id);
+            $countsQuery->where('user_id', $user->id);
         } elseif ($request->filled('user_id')) {
-            $query->where('user_id', (int) $request->query('user_id'));
+            $countsQuery->where('user_id', (int) $request->query('user_id'));
         }
+
+        // Aggregate counts per status across all accessible tasks
+        $rawCounts = (clone $countsQuery)
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->all();
+
+        $counts = [
+            'total' => array_sum($rawCounts),
+            'pending' => (int) ($rawCounts[Task::STATUS_PENDING] ?? 0),
+            'in_progress' => (int) ($rawCounts[Task::STATUS_IN_PROGRESS] ?? 0),
+            'completed' => (int) ($rawCounts[Task::STATUS_COMPLETED] ?? 0),
+        ];
+
+        // Query for the paginated listing
+        $query = (clone $countsQuery)->with(['user', 'creator'])->latest('id');
 
         if ($request->filled('status') && in_array($request->query('status'), Task::STATUSES, true)) {
             $query->where('status', $request->query('status'));
         }
 
         $perPage = max(1, min((int) $request->query('per_page', 15), 100));
+        $paginated = $query->paginate($perPage);
 
-        return $query->paginate($perPage);
+        return response()->json([
+            'counts' => $counts,
+            'tasks' => $paginated,
+        ]);
     }
 
     /**

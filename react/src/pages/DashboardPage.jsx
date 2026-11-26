@@ -25,6 +25,12 @@ export default function DashboardPage() {
     perPage: 10,
     total: 0,
   });
+  const [count, setCount] = useState({
+    total: 0,
+    pending: 0,
+    in_progress: 0,
+    completed: 0,
+  });
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
@@ -42,7 +48,9 @@ export default function DashboardPage() {
         `/tasks?page=${page}&per_page=${pagination.perPage}${statusQuery}`,
         { token },
       );
-      setTasks(Array.isArray(response) ? response : response?.data || []);
+      console.log(response);
+      setTasks(response?.tasks?.data ?? []);
+      setCount(response?.counts ?? [])
       if (response?.meta) {
         setPagination({
           currentPage: response.meta.current_page,
@@ -77,10 +85,10 @@ export default function DashboardPage() {
   }, [page, pagination.lastPage]);
   const counts = useMemo(
     () => ({
-      all: tasks.length,
-      pending: tasks.filter((task) => task.status === "pending").length,
-      in_progress: tasks.filter((task) => task.status === "in_progress").length,
-      completed: tasks.filter((task) => task.status === "completed").length,
+      all: count.total,
+      pending: count.pending,
+      in_progress: count.pending,
+      completed: count.completed
     }),
     [tasks],
   );
@@ -171,7 +179,7 @@ export default function DashboardPage() {
               }}
             >
               {item.icon}
-              <span>{item.label} - {item.id}</span>
+              <span>{item.label}</span>
             </button>
           ))}
         </nav>
