@@ -28,11 +28,11 @@ class TaskTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.title', 'Write API documentation')
-            ->assertJsonPath('data.user_id', $assignee->id)
-            ->assertJsonPath('data.created_by', $admin->id)
-            ->assertJsonPath('data.status', Task::STATUS_PENDING)
-            ->assertJsonPath('data.due_date', '2026-12-01');
+            ->assertJsonPath('title', 'Write API documentation')
+            ->assertJsonPath('user_id', $assignee->id)
+            ->assertJsonPath('created_by', $admin->id)
+            ->assertJsonPath('status', Task::STATUS_PENDING)
+            ->assertJsonPath('due_date', '2026-12-01');
 
         $this->assertDatabaseHas('tasks', [
             'title' => 'Write API documentation',
@@ -51,9 +51,9 @@ class TaskTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.user_id', $admin->id)
-            ->assertJsonPath('data.created_by', $admin->id)
-            ->assertJsonPath('data.status', Task::STATUS_PENDING);
+            ->assertJsonPath('user_id', $admin->id)
+            ->assertJsonPath('created_by', $admin->id)
+            ->assertJsonPath('status', Task::STATUS_PENDING);
     }
 
     public function test_regular_user_cannot_create_task(): void
@@ -86,7 +86,7 @@ class TaskTest extends TestCase
 
         $this->getJson('/api/tasks/'.$ownTask->id)
             ->assertOk()
-            ->assertJsonPath('data.title', 'My Task');
+            ->assertJsonPath('title', 'My Task');
 
         $this->getJson('/api/tasks/'.$otherTask->id)
             ->assertForbidden();
@@ -138,8 +138,8 @@ class TaskTest extends TestCase
             'status' => Task::STATUS_COMPLETED,
             'description' => 'Done!',
         ])->assertOk()
-            ->assertJsonPath('data.status', Task::STATUS_COMPLETED)
-            ->assertJsonPath('data.description', 'Done!');
+            ->assertJsonPath('status', Task::STATUS_COMPLETED)
+            ->assertJsonPath('description', 'Done!');
 
         $this->patchJson('/api/tasks/'.$ownTask->id, [
             'user_id' => $otherUser->id,

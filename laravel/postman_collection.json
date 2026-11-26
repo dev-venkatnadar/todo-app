@@ -316,7 +316,7 @@
 								"exec": [
 									"if (pm.response.code === 201) {",
 									"    var jsonData = pm.response.json();",
-									"    if (jsonData.data && jsonData.data.id) {",
+									"    if (jsonData.id) {",
 									"        pm.collectionVariables.set('task_id', jsonData.data.id);",
 									"    }",
 									"}"

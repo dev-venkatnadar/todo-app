@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -16,7 +15,7 @@ class TaskController extends Controller
     /**
      * List tasks. Admins see all tasks; users see only their own tasks.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): LengthAwarePaginator
     {
         $this->authorize('viewAny', Task::class);
 
@@ -35,7 +34,7 @@ class TaskController extends Controller
 
         $perPage = max(1, min((int) $request->query('per_page', 15), 100));
 
-        return TaskResource::collection($query->paginate($perPage));
+        return $query->paginate($perPage);
     }
 
     /**
@@ -66,27 +65,25 @@ class TaskController extends Controller
 
         $task->load(['user', 'creator']);
 
-        return (new TaskResource($task))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+        return response()->json($task, Response::HTTP_CREATED);
     }
 
     /**
      * Show a single task (admin or task owner).
      */
-    public function show(Task $task): TaskResource
+    public function show(Task $task): Task
     {
         $this->authorize('view', $task);
 
         $task->load(['user', 'creator']);
 
-        return new TaskResource($task);
+        return $task;
     }
 
     /**
      * Update a task (admin or task owner; only admin can reassign user_id).
      */
-    public function update(Request $request, Task $task): TaskResource
+    public function update(Request $request, Task $task): Task
     {
         $this->authorize('update', $task);
 
@@ -107,7 +104,7 @@ class TaskController extends Controller
         $task->update($validated);
         $task->load(['user', 'creator']);
 
-        return new TaskResource($task);
+        return $task;
     }
 
     /**
