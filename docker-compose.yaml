@@ -1,0 +1,135 @@
+name: todo-app
+
+x-laravel-environment: &laravel-environment
+  APP_NAME: ${APP_NAME:-Todo}
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_URL: ${APP_URL:?Set APP_URL in the deployment environment}
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-warning}
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in the deployment environment}
+  DB_USERNAME: ${MYSQL_USER:?Set MYSQL_USER in the deployment environment}
+  DB_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in the deployment environment}
+  CACHE_DRIVER: file
+  SESSION_DRIVER: file
+  QUEUE_CONNECTION: sync
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in the deployment environment}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in the deployment environment}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in the deployment environment}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in the deployment environment}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    image: todo-app-laravel:local
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    restart: "no"
+    env_file:
+      - ./laravel/.env
+    environment: *laravel-environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["sh", "-c", "php artisan migrate --force && php artisan db:seed --force"]
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  laravel:
+    image: todo-app-laravel:local
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./laravel/.env
+    environment: *laravel-environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "80"
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up >/dev/null || curl -fsS http://127.0.0.1/ >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+
+  react:
+    build:
+      context: ./react
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    restart: unless-stopped
+    depends_on:
+      laravel:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  phpmyadmin:
+    image: phpmyadmin:5-apache
+    profiles: ["admin"]
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: ${PHPMYADMIN_UPLOAD_LIMIT:-16M}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${PHPMYADMIN_PORT:-8080}:80"
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  mysql_data:
+
+networks:
+  frontend:
+  backend:
+    internal: true
