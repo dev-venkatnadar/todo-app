@@ -1,5 +1,5 @@
 # Todo Dashboard
-
+ 
 A task management application with a React dashboard, a Laravel REST API, and MySQL. The root Docker Compose stack runs the complete application and serves the frontend and API from one origin.
 
 ## Applications
@@ -11,6 +11,8 @@ A task management application with a React dashboard, a Laravel REST API, and My
 | `docker-compose.yaml` | Full deployment | React, Laravel, MySQL 8.4; optional phpMyAdmin |
 
 The `ai-agent/` directory currently contains no tracked application source, so there is no separate AI service to run or deploy yet.
+
+<img width="1912" height="1018" alt="image" src="https://github.com/user-attachments/assets/a88e54f5-5bfc-4e22-9cb6-6ce0c52f948b" />
 
 ## Features
 
